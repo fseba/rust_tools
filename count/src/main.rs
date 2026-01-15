@@ -1,14 +1,16 @@
-use std::{io::stdin, process};
+use std::env;
 
-use count::count_lines;
+use anyhow::{Result, bail};
 
-fn main() {
-    let res = count_lines(stdin().lock());
-    match res {
-        Ok(lines) => println!("{lines} lines"),
-        Err(e) => {
-            eprintln!("{e}");
-            process::exit(1);
-        }
+use count::count_lines_in_path;
+
+fn main() -> Result<()> {
+    let args: Vec<_> = env::args().skip(1).collect();
+    if args.is_empty() {
+        bail!("Usage: count <FILE>")
     }
+    for path in args {
+        println!("{path}: {} lines", count_lines_in_path(&path)?);
+    }
+    Ok(())
 }

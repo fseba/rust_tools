@@ -1,18 +1,29 @@
-use std::io::{BufRead, Result};
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+};
+
+use anyhow::{Context, Result};
+
+pub fn count_lines(input: impl BufRead) -> Result<usize> {
+    let mut count = 0;
+    for line in input.lines() {
+        line?;
+        count += 1;
+    }
+    Ok(count)
+}
 
 // pub fn count_lines(input: impl BufRead) -> Result<usize> {
-//     let mut count = 0;
-//     for line in input.lines() {
-//         line?;
-//         count += 1;
-//     }
-//     Ok(count)
+//     input
+//         .lines()
+//         .try_fold(0, |count, line| line.map(|_| count + 1))
 // }
-//
-pub fn count_lines(input: impl BufRead) -> Result<usize> {
-    input
-        .lines()
-        .try_fold(0, |count, line| line.map(|_| count + 1))
+
+pub fn count_lines_in_path(path: &String) -> Result<usize> {
+    let file = File::open(path).with_context(|| path.clone())?;
+    let file = BufReader::new(file);
+    count_lines(file).with_context(|| path.clone())
 }
 
 #[cfg(test)]
@@ -40,6 +51,12 @@ mod test {
     fn count_lines_counts_lines_in_input() {
         let input = Cursor::new("line 1\nline2\n");
         let lines = count_lines(input).unwrap();
+        assert_eq!(lines, 2, "wrong line count");
+    }
+
+    #[test]
+    fn count_lines_in_path_counts_lines_in_given_file() {
+        let lines = count_lines_in_path(&"./src/test_file".to_string()).unwrap();
         assert_eq!(lines, 2, "wrong line count");
     }
 }
