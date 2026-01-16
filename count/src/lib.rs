@@ -74,7 +74,7 @@ mod test {
 
     #[test]
     fn count_in_path_counts_lines_and_words_in_given_file() {
-        let count = count_in_path(&"./src/test_file".to_string()).unwrap();
+        let count = count_in_path(&"./tests/data/test_file_2".to_string()).unwrap();
         assert_eq!(count.lines, 2, "wrong line count");
         assert_eq!(count.words, 4, "wrong word count");
     }
