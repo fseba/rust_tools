@@ -1,0 +1,1 @@
+{ "request": { "type": "City", "query": "London, United Kingdom","temperature": 11.2,"weather_descriptions": ["Sunny"]}}
