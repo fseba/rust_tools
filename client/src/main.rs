@@ -13,6 +13,6 @@ fn main() -> Result<()> {
     let api_key = "fake_api_key";
     let ws = Weatherstack::new(api_key);
     let weather = ws.get_weather(&location)?;
-    println!("{weather}");
+    println!("{} {}", weather.summary, weather.temperature);
     Ok(())
 }

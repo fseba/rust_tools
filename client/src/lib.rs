@@ -1,20 +1,41 @@
+use std::fmt::Display;
+
 use anyhow::{Context, Result};
 use reqwest::blocking::RequestBuilder;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::fmt::Display;
 use url::Host::Domain;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct Weather {
-    temperature: f64,
-    summary: String,
+pub struct Temperature(f64);
+
+impl Temperature {
+    #[must_use]
+    pub fn from_celsius(val: f64) -> Self {
+        Self(val)
+    }
+
+    #[must_use]
+    pub fn as_celsius(&self) -> f64 {
+        self.0
+    }
+
+    #[must_use]
+    pub fn as_fahrenheit(&self) -> f64 {
+        self.0 * 1.8 + 32.0
+    }
 }
 
-impl Display for Weather {
+impl Display for Temperature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {:.1}ºC", self.summary, self.temperature)
+        write!(f, "{}", self.0)
     }
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct Weather {
+    pub temperature: Temperature,
+    pub summary: String,
 }
 
 pub struct Weatherstack {
@@ -50,7 +71,7 @@ fn deserialize(text: &str) -> Result<Weather> {
         .with_context(|| format!("bad response: {val}"))?
         .to_string();
     Ok(Weather {
-        temperature,
+        temperature: Temperature::from_celsius(temperature),
         summary,
     })
 }
@@ -96,7 +117,7 @@ mod test {
         assert_eq!(
             weather,
             Weather {
-                temperature: 11.2,
+                temperature: Temperature::from_celsius(11.2),
                 summary: "Sunny".into(),
             },
             "wrong weather"
@@ -122,10 +143,17 @@ mod test {
         assert_eq!(
             weather.unwrap(),
             Weather {
-                temperature: 11.2,
+                temperature: Temperature::from_celsius(11.2),
                 summary: "Sunny".into()
             },
             "wrong weather"
         );
+    }
+
+    #[test]
+    fn temperature_can_be_expressed_as_celsius_or_fahrenheit() {
+        let temp = Temperature::from_celsius(10.0);
+        assert_eq!(temp.as_celsius(), 10.0);
+        assert_eq!(temp.as_fahrenheit(), 50.0);
     }
 }
