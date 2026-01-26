@@ -13,15 +13,29 @@ pub struct Weather {
 
 impl Display for Weather {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
+        write!(f, "{} {:.1}ºC", self.summary, self.temperature)
     }
 }
 
-pub fn get_weather(location: &str, api_key: &str) -> Result<Weather> {
-    //     .send()
-    let resp = request(location, api_key).send()?;
-    let weather = deserialize(&resp.text()?)?;
-    Ok(weather)
+pub struct Weatherstack {
+    api_key: String,
+    pub base_url: String,
+}
+
+impl Weatherstack {
+    #[must_use]
+    pub fn new(api_key: &str) -> Self {
+        Self {
+            api_key: api_key.to_owned(),
+            base_url: "http://localhost:7878/current".into(),
+        }
+    }
+
+    pub fn get_weather(&self, location: &str) -> Result<Weather> {
+        let resp = request(&self.base_url, location, &self.api_key).send()?;
+        let weather = deserialize(&resp.text()?)?;
+        Ok(weather)
+    }
 }
 
 fn deserialize(text: &str) -> Result<Weather> {
@@ -41,9 +55,9 @@ fn deserialize(text: &str) -> Result<Weather> {
     })
 }
 
-fn request(location: &str, api_key: &str) -> RequestBuilder {
+fn request(base_url: &str, location: &str, api_key: &str) -> RequestBuilder {
     reqwest::blocking::Client::new()
-        .get("http://localhost:7878")
+        .get(base_url)
         .query(&[("query", &location), ("access_key", &api_key)])
 }
 
@@ -51,11 +65,15 @@ fn request(location: &str, api_key: &str) -> RequestBuilder {
 mod test {
     use std::fs;
 
+    use http::StatusCode;
+    use httpmock::{Method, MockServer};
+
     use super::*;
 
     #[test]
     fn request_builds_correct_request() {
-        let req = request("London,UK", "dummy API key");
+        let ws = Weatherstack::new("dummy API key");
+        let req = request(&ws.base_url, "London,UK", &ws.api_key);
         let req = req.build().unwrap();
         assert_eq!(req.method(), "GET", "wrong method");
         let url = req.url();
@@ -80,6 +98,32 @@ mod test {
             Weather {
                 temperature: 11.2,
                 summary: "Sunny".into(),
+            },
+            "wrong weather"
+        );
+    }
+
+    #[test]
+    fn get_weather_fn_makes_correct_api_call() {
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(Method::GET)
+                .path("/current")
+                .query_param("query", "London,UK")
+                .query_param("access_key", "dummy API key");
+            then.status(StatusCode::OK)
+                .header("content-type", "application/json")
+                .body_from_file("tests/data/weather.json");
+        });
+        let mut ws = Weatherstack::new("dummy API key");
+        ws.base_url = server.base_url() + "/current";
+        let weather = ws.get_weather("London,UK");
+        mock.assert();
+        assert_eq!(
+            weather.unwrap(),
+            Weather {
+                temperature: 11.2,
+                summary: "Sunny".into()
             },
             "wrong weather"
         );

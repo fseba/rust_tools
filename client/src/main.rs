@@ -2,7 +2,7 @@ use anyhow::{Result, bail};
 
 use std::env;
 
-use client::get_weather;
+use client::Weatherstack;
 
 fn main() -> Result<()> {
     let args: Vec<_> = env::args().skip(1).collect();
@@ -10,8 +10,9 @@ fn main() -> Result<()> {
         bail!("Usage: weather <LOCATION>");
     }
     let location = args.join(" ");
-    let api_key = env::var("FAKE_API_KEY")?;
-    let weather = get_weather(&location, &api_key)?;
+    let api_key = "fake_api_key";
+    let ws = Weatherstack::new(api_key);
+    let weather = ws.get_weather(&location)?;
     println!("{weather}");
     Ok(())
 }
